@@ -1,0 +1,22 @@
+# Qt 编译输出
+build/
+*.user
+*.pro.user
+*.autosave
+
+# Qt Creator
+.qtcreator/
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+Makefile
+cmake_install.cmake
+CMakeLists.txt.user
+
+# 其他编译文件
+*.o
+*.exe
+*.dll
+*.so
+*.dylib

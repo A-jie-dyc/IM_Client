@@ -1,3 +1,0 @@
-D:\Qt\Tools\CMake_64\bin\cmake.exe -E rm -f CMakeFiles\IM_Client.dir/objects.a
-D:\Qt\Tools\mingw1310_64\bin\ar.exe qc CMakeFiles\IM_Client.dir/objects.a @CMakeFiles\IM_Client.dir\objects1.rsp
-D:\Qt\Tools\mingw1310_64\bin\g++.exe -g -Wl,--whole-archive CMakeFiles\IM_Client.dir/objects.a -Wl,--no-whole-archive -o IM_Client.exe -Wl,--out-implib,libIM_Client.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\IM_Client.dir\linkLibs.rsp
