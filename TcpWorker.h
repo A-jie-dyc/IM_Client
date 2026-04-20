@@ -28,16 +28,16 @@ signals:
     void sigMessage(const QString &mes);
 
 private slots:
-    void connectToServer(const QString &ip,const int &port);
-    void disconnectFromServer();
     void onReadyRead();
-    void sendMessage(const QString &mes);
-    void sendFile(const QString &filePath);
     void onSendFileContent();
 
 private:
-    void cleanResource();
+    void connectToServer(const QString &ip,const int &port);
+    void disconnectFromServer();
+    void sendMessage(const QString &mes);
+    void sendFile(const QString &filePath);
     void sendRealFileHead();
+    void cleanResource();
 
     QTcpSocket *m_socket;
 

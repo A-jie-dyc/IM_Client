@@ -104,28 +104,24 @@ void TcpWorker::onReadyRead()
                 isBigFile=false;
                 if(writeSize>0)
                 {
-                    quint64 Len;
-                    Len=m_recvFile.write(m_buf.data(),writeSize);
-                    m_writeCount+=Len;
+                    m_recvFile.write(m_buf.data(),writeSize);
                     m_buf=m_buf.mid(writeSize);
                     m_recvSize+=writeSize;
-                    if(Len<=0)
-                    {
-                        qDebug()<<"写入失败，已拒绝接收";
-                        continue;
-                    }
-                    if(m_writeCount>=65536)
-                    {
-                        m_recvFile.flush();
-                        m_writeCount=0;
-                    }
+
                 }
+            }
+            m_writeCount+=writeSize;
+            if(m_writeCount>=65536)
+            {
+                m_recvFile.flush();
+                m_writeCount=0;
             }
         }
         if(m_recvSize>=m_fileSize&&m_fileSize>0)
         {
             if(isBigFile&&m_fileMem)
             {
+                isBigFile=false;
                 m_recvFile.unmap(m_fileMem);
                 m_fileMem=nullptr;
             }
@@ -135,7 +131,6 @@ void TcpWorker::onReadyRead()
             m_fileSize=0;
             m_recvSize=0;
             m_writeCount=0;
-            isBigFile=false;
             m_recvFileName.clear();
             continue;
         }
@@ -187,33 +182,35 @@ void TcpWorker::onReadyRead()
 
             if(m_recvSize>=m_fileSize)
             {
-                qDebug()<<"文件已存在且完整"<<m_recvFile.errorString();
+                qDebug()<<"文件已存在且完整";
                 m_recvFile.close();
+                m_fileMem=nullptr;
                 m_fileSize=0;
                 continue;
             }
-            else if(m_recvSize==0)
+            if(isBigFile)
             {
-                if(isBigFile)
+                if(m_recvSize==0)
                 {
                     m_recvFile.resize(m_fileSize);
-                    m_fileMem=m_recvFile.map(0,m_fileSize);
-                    if(!m_fileMem)
-                    {
-                        qDebug()<<"内存映射失败，切换小文件写入模式";
-                        isBigFile=false;
-                    }
                 }
-                else m_fileMem=nullptr;
+                m_fileMem=m_recvFile.map(0,m_fileSize);
+                if(!m_fileMem)
+                {
+                    qDebug()<<"内存映射失败，切换小文件写入模式";
+                    isBigFile=false;
+                }
+            }
+            else m_fileMem=nullptr;
 
+            if(m_recvSize==0)
+            {
                 qDebug()<<"接收文件:"<<m_recvFileName<<"总大小:"<<m_fileSize;
                 continue;
             }
             else
             {
-                isBigFile=false;
-                m_fileMem=nullptr;
-                qDebug()<<"接收文件:"<<m_recvFileName<<"续传位置:"<<m_recvSize<<"总大小:"<<m_fileSize;
+                qDebug()<<"续传文件:"<<m_recvFileName<<"续传位置:"<<m_recvSize<<"总大小:"<<m_fileSize;
                 continue;
             }
         }
