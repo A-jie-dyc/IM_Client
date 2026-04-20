@@ -13,27 +13,68 @@ TcpWorker::TcpWorker(QObject *parent)
     ,m_socket(new QTcpSocket(this))
     ,m_file(nullptr)
     ,isBigFile(false)
+    ,m_heartTimer(new QTimer(this))
 {
-    connect(m_socket,&QTcpSocket::disconnected,this,&QTcpSocket::deleteLater);
+    m_heartTimer->setInterval(5000);
+
     connect(m_socket,&QTcpSocket::readyRead,this,&TcpWorker::onReadyRead);
     connect(m_socket,&QTcpSocket::bytesWritten,this,&TcpWorker::onSendFileContent);
     connect(m_socket,&QTcpSocket::errorOccurred,this,[this](QAbstractSocket::SocketError err){
         qDebug()<<"网络错误:"<<m_socket->errorString();
         cleanResource();
     });
+    connect(m_heartTimer,&QTimer::timeout,this,[this](){
+        if(m_socket->state()!=QAbstractSocket::ConnectedState)
+        {
+            m_heartTimer->stop();
+            return;
+        }
+
+        m_heartCount++;
+        if(m_heartCount>=3)
+        {
+            qDebug()<<"心跳超时";
+            disconnectFromServer();
+            return;
+        }
+
+        QByteArray hreat;
+        hreat.append((char)0x05);
+        m_socket->write(hreat);
+    });
 }
 
 
 void TcpWorker::connectToServer(const QString &ip,const int &port)
 {
+    if(m_socket->state()==QAbstractSocket::ConnectedState)
+    {
+        m_socket->disconnectFromHost();
+    }
+
     m_socket->connectToHost(ip,port);
-    qDebug()<<"成功连接服务器";
+
+    if(m_socket->state()==QAbstractSocket::ConnectingState)
+    {
+        qDebug()<<"成功连接服务器";
+        m_heartTimer->start();
+    }
 }
 
 void TcpWorker::disconnectFromServer()
 {
-    m_socket->disconnectFromHost();
-    qDebug()<<"已断开服务器";
+    m_heartTimer->stop();
+    m_heartCount=0;
+    if(m_socket->state()!=QAbstractSocket::UnconnectedState)
+    {
+        m_socket->disconnectFromHost();
+        qDebug()<<"已断开服务器";
+    }
+    else
+    {
+        qDebug()<<"未连接服务器";
+    }
+
 }
 
 void TcpWorker::onReadyRead()
@@ -52,7 +93,7 @@ void TcpWorker::onReadyRead()
         if(m_fileSize>0&&m_recvFile.isOpen())
         {
             quint64 writeSize=qMin((quint64)m_buf.size(),m_fileSize-m_recvSize);
-            if(isBigFile)
+            if(isBigFile&&m_fileMem!=nullptr)
             {
                 memcpy(m_fileMem+m_recvSize,m_buf.data(),writeSize);
                 m_buf=m_buf.mid(writeSize);
@@ -60,11 +101,19 @@ void TcpWorker::onReadyRead()
             }
             else
             {
+                isBigFile=false;
                 if(writeSize>0)
                 {
-                    m_writeCount+=m_recvFile.write(m_buf.data(),writeSize);
+                    quint64 Len;
+                    Len=m_recvFile.write(m_buf.data(),writeSize);
+                    m_writeCount+=Len;
                     m_buf=m_buf.mid(writeSize);
                     m_recvSize+=writeSize;
+                    if(Len<=0)
+                    {
+                        qDebug()<<"写入失败，已拒绝接收";
+                        continue;
+                    }
                     if(m_writeCount>=65536)
                     {
                         m_recvFile.flush();
@@ -162,16 +211,8 @@ void TcpWorker::onReadyRead()
             }
             else
             {
-                if(isBigFile)
-                {
-                    m_fileMem=m_recvFile.map(0,m_fileSize);
-                    if(!m_fileMem)
-                    {
-                        qDebug()<<"续传内存映射失败，切换小文件写入模式";
-                        isBigFile=false;
-                    }
-                }
-                else m_fileMem=nullptr;
+                isBigFile=false;
+                m_fileMem=nullptr;
                 qDebug()<<"接收文件:"<<m_recvFileName<<"续传位置:"<<m_recvSize<<"总大小:"<<m_fileSize;
                 continue;
             }
@@ -186,6 +227,11 @@ void TcpWorker::onReadyRead()
 
             quint32 nameLen;
             in>>nameLen;
+            if(nameLen==0||nameLen>1024*1024)
+            {
+                qDebug()<<"脏信息传入，已拒绝";
+                continue;
+            }
 
             int needSize=4+nameLen;
             if(m_buf.size()<needSize) break;
@@ -240,9 +286,24 @@ void TcpWorker::onReadyRead()
             sendRealFileHead();
             continue;
         }
+        else if(flag==0x05)
+        {
+            m_buf=m_buf.mid(1);
+            QByteArray ack;
+            ack.append((char)0x06);
+            m_socket->write(ack);
+        }
+        else if(flag==0x06)
+        {
+            m_buf=m_buf.mid(1);
+            m_heartCount=0;
+            continue;
+        }
         else
         {
             qDebug()<<"未知信息,已拒绝接收";
+            m_buf.clear();
+            return;
         }
     }
 }
@@ -335,10 +396,13 @@ void TcpWorker::cleanResource()
         m_file->deleteLater();
         m_file=nullptr;
     }
+    isBigFile=false;
+    m_fileMem=nullptr;
     isSending=false;
     m_fileSize=0;
     m_recvSize=0;
     m_buf.clear();
     m_recvFileName.clear();
     m_fileName.clear();
+    m_heartTimer->stop();
 }

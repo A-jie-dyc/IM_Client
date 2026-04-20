@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QTcpSocket>
 #include <QFile>
-
+#include <QTimer>
 
 
 
@@ -43,8 +43,7 @@ private:
 
     QFile *m_file;      //发送文件对象
     QString m_fileName;     //发送文件名
-
-    bool isSending;     //发送中状态
+    bool isSending=false;     //发送中状态
 
     QByteArray m_buf;       //读缓存
     QFile m_recvFile;       //接收文件对象
@@ -52,8 +51,11 @@ private:
     quint64 m_fileSize=0;       //文件总大小
     quint64 m_recvSize=0;       //已接收大小
     quint64 m_writeCount=0;       //刷盘计数器
-    bool isBigFile;         //大体积文件
+    bool isBigFile=false;         //大体积文件
     uchar *m_fileMem;       //内存映射指针
+
+    QTimer *m_heartTimer;       //心跳监测器
+    int m_heartCount=0;       //心跳次数
 };
 
 #endif // TCPSENDWORKER_H
