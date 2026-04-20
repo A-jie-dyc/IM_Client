@@ -28,21 +28,23 @@ signals:
     void sigMessage(const QString &mes);
 
 private slots:
+    void connectToServer(const QString &ip,const int &port);
+    void disconnectFromServer();
     void onReadyRead();
+    void sendMessage(const QString &mes);
+    void sendFile(const QString &filePath);
     void onSendFileContent();
 
 private:
-    void connectToServer(const QString &ip,const int &port);
-    void disconnectFromServer();
-    void sendMessage(const QString &mes);
-    void sendFile(const QString &filePath);
     void sendRealFileHead();
     void cleanResource();
 
     QTcpSocket *m_socket;
 
     QFile *m_file;      //发送文件对象
-    QString m_fileName;     //发送文件名
+    QString m_sendFileName;     //发送文件名
+    quint64 m_sendTotal=0;
+    quint64 m_sendSize=0;
     bool isSending=false;     //发送中状态
 
     QByteArray m_buf;       //读缓存

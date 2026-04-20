@@ -7,6 +7,7 @@
 #include <QVBoxLayout>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QProgressBar>
 
 TcpClient::TcpClient(QWidget *parent)
     : QWidget{parent}
@@ -31,6 +32,15 @@ TcpClient::TcpClient(QWidget *parent)
     m_onConnection=new QPushButton("连接服务器");
     m_onDisconnected=new QPushButton("断开连接");
 
+    m_sendProgress=new QProgressBar(this);
+    m_sendProgress->hide();
+    m_sendProgress->setRange(0,100);
+    m_sendProgress->setValue(0);
+    m_recvProgress=new QProgressBar(this);
+    m_recvProgress->hide();
+    m_recvProgress->setRange(0,100);
+    m_recvProgress->setValue(0);
+
     m_mainlay=new QVBoxLayout;
     QHBoxLayout *serverlay=new QHBoxLayout;
     QHBoxLayout *sendlay=new QHBoxLayout;
@@ -45,6 +55,8 @@ TcpClient::TcpClient(QWidget *parent)
     m_mainlay->addWidget(m_read);
     m_mainlay->addLayout(sendlay);
     m_mainlay->addLayout(serverlay);
+    m_mainlay->addWidget(m_sendProgress);
+    m_mainlay->addWidget(m_recvProgress);
 
     setLayout(m_mainlay);
 
@@ -53,6 +65,34 @@ TcpClient::TcpClient(QWidget *parent)
     connect(m_btnSendMes,&QPushButton::clicked,this,&TcpClient::onSendMes);
     connect(m_btnSendFile,&QPushButton::clicked,this,&TcpClient::onSendFile);
     connect(m_worker,&TcpWorker::sigMessage,this,&TcpClient::onReadMes);
+    connect(m_worker,&TcpWorker::sigSendProgress,this,&TcpClient::onSendProgress);
+    connect(m_worker,&TcpWorker::sigRecvProgress,this,&TcpClient::onRecvProgress);
+}
+
+void TcpClient::onRecvProgress(const quint64 &sent,const quint64 &total)
+{
+    m_recvProgress->show();
+    int percent=(sent*100)/total;
+    m_recvProgress->setValue(percent);
+
+    if(sent>=total)
+    {
+        m_recvProgress->hide();
+        m_recvProgress->setValue(0);
+    }
+}
+
+void TcpClient::onSendProgress(const quint64 &sent,const quint64 &total)
+{
+    m_sendProgress->show();
+    int percent=(sent*100)/total;
+    m_sendProgress->setValue(percent);
+
+    if(sent>=total)
+    {
+        m_sendProgress->hide();
+        m_sendProgress->setValue(0);
+    }
 }
 
 void TcpClient::onSendFile()

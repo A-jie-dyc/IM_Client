@@ -23,6 +23,8 @@ private slots:
     void onSendMes();
     void onSendFile();
     void onReadMes(const QString &mes);
+    void onSendProgress(const quint64 &sent,const quint64 &total);
+    void onRecvProgress(const quint64 &sent,const quint64 &total);
 
 private:
     QTextEdit *m_read;
@@ -32,7 +34,8 @@ private:
     QPushButton *m_onConnection;
     QPushButton *m_onDisconnected;
     QVBoxLayout *m_mainlay;
-    QProgressBar *m_progress;
+    QProgressBar *m_sendProgress;
+    QProgressBar *m_recvProgress;
 
     QThread *m_workThread;       //工作线程
     TcpWorker *m_worker;        //工作对象
