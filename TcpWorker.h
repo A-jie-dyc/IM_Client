@@ -17,12 +17,21 @@ struct packetHeader
 
 enum class Cmd:quint8
 {
-    Mes      =1,    //消息
-    File     =2,    //文件
-    Query    =3,    //断点询问
-    Resp     =4,    //断点回复
-    HeartRep =5,    //心跳请求
-    HeartResp=6     //心跳响应
+    Mes,          //消息
+    File,         //文件
+    Query,        //断点询问
+    Resp,         //断点回复
+    HeartRep,     //心跳请求
+    HeartResp,    //心跳响应
+};
+
+enum class Information
+{
+    Connected,
+    Disconnected,
+    Reconnecting,
+    Logs,
+    Error
 };
 
 struct sendFile
@@ -53,14 +62,19 @@ struct recvFile
     QString fileName;     //接收文件名
     quint64 totalSize=0;       //文件总大小
     quint64 recvSize=0;       //已接收大小
-    qint64 remainSize=0;       //剩余大小
+    quint64 remainSize=0;       //剩余大小
     quint64 writeCount=0;       //刷盘计数器
     bool isBigFile=false;         //大体积文件
     uchar *fileMem=nullptr;       //内存映射指针
     void reset()
     {
-        if (file) {
-            if (fileMem) file->unmap(fileMem);
+        if (fileMem)
+        {
+            file->unmap(fileMem);
+            fileMem=nullptr;
+        }
+        if (file)
+        {
             file->close();
             file->deleteLater();
             file=nullptr;
@@ -71,7 +85,6 @@ struct recvFile
         remainSize=0;
         writeCount=0;
         isBigFile=false;
-        fileMem=nullptr;
     }
 };
 
@@ -82,11 +95,13 @@ struct ReconnectInfo
     QTimer *timer=nullptr;
     const int baseInterval=2000;
     const int maxInterval=32000;        //最大间隔
+    int setInterval=0;
     bool allowReconnect=true;
     int retryCount=0;
     void reset()
     {
         retryCount=0;
+        setInterval=0;
         allowReconnect=true;
         if(timer) timer->stop();
     }
@@ -104,12 +119,14 @@ public:
     static constexpr int PACKET_HEADER_SIZE=sizeof(packetHeader);
 
 signals:
-    void sigConnection();
-    void sigDisconnected();
-
+    void sigInformation(Information info,const QString &text);
+    void sigEquipment(const QString &ip,const int &port);
     void sigRecvProgress(const quint64 &sent,const quint64 &total);
     void sigSendProgress(const quint64 &sent,const quint64 &total);
     void sigMessage(const QString &mes);
+
+public slots:
+    void Init();
 
 private slots:
     void connectToServer(const QString &ip,const int &port);
@@ -132,7 +149,7 @@ private:
     QByteArray packPacket(quint8 Cmd,const QByteArray &data);
     bool unpackPacket(QByteArray &buf,packetHeader &header,QByteArray &data);
 
-    QTcpSocket *m_socket;
+    QTcpSocket *m_socket=nullptr;
 
     QTimer *m_heartTimer=nullptr;       //心跳监测器
     int m_heartCount=0;       //心跳次数

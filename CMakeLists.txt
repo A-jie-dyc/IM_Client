@@ -18,7 +18,6 @@ target_link_libraries(IM_Client
         Qt::Network
         Qt::Widgets
 )
-target_link_libraries(IM_Client PRIVATE Qt6::Widgets)
 
 install(TARGETS IM_Client
     BUNDLE  DESTINATION .
