@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.19)
 project(IM_Client LANGUAGES CXX)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets Network)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets Network Sql)
 
 qt_standard_project_setup()
 
@@ -17,6 +17,7 @@ target_link_libraries(IM_Client
         Qt::Core
         Qt::Network
         Qt::Widgets
+        Qt::Sql
 )
 
 install(TARGETS IM_Client

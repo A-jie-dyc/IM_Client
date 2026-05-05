@@ -9,12 +9,40 @@
 #include <QSplitter>
 #include <QStatusBar>
 #include <QDialog>
+#include <QSqlDatabase>
+#include <QKeyEvent>
+#include <QTextEdit>
+#include <QMenu>
 
-class QTextEdit;
 class QPushButton;
 class QVBoxLayout;
 class QProgressBar;
 class QLabel;
+
+//自定义聊天框类
+class ChatEdit:public QTextEdit
+{
+    Q_OBJECT
+public:
+    explicit ChatEdit(QWidget *parent = nullptr){}
+
+signals:
+    void Send();
+
+protected:
+    void keyPressEvent(QKeyEvent *event) override
+    {
+        if(event->key()==Qt::Key_Return)
+        {
+            if(!event->modifiers().testFlag(Qt::ShiftModifier))
+            {
+                emit Send();
+                return;
+            }
+        }
+        QTextEdit::keyPressEvent(event);
+    }
+};
 
 class TcpClient : public QMainWindow
 {
@@ -28,9 +56,10 @@ private slots:
     void onDisconnected();
     void onSendMes();
     void onSendFile();
-    void onShowMes(const QString &mes);
+    void onShowMes(bool me,const QString &mes);
     void onSendProgress(const quint64 &sent,const quint64 &total);
     void onRecvProgress(const quint64 &sent,const quint64 &total);
+    void onDeviceRightMenu(const QPoint pos);
 
 private:
     void initWindow();
@@ -38,6 +67,9 @@ private:
     void setInfo(Information info,const QString &text);
     void setList(const QString &ip,const int &port);
     void appendLog(const QString &log);
+    void onDeviceSelect(QListWidgetItem *item);
+    void clearCurrentDeviceChat();
+
     //工具栏
     QLineEdit *m_editIP;
     QLineEdit *m_editPort;
@@ -46,7 +78,7 @@ private:
     //中间
     QListWidget *m_deviceList;
     QTextEdit *m_chatShow;
-    QTextEdit *m_chatInput;
+    ChatEdit *m_chatInput;
     QPushButton *m_btnSendMes;
     QPushButton *m_btnSendFile;
     QProgressBar *m_sendProgress;
@@ -57,6 +89,12 @@ private:
     //日志
     QDialog *m_logsWindow;
     QTextEdit *m_logText;
+    //数据库
+    QSqlDatabase m_db;
+    QString m_currentDevice;
+    void initDatabase();
+    void saveChatMessage(const QString &deviceInfo,const QString &sender,const QString &content);
+    void localChatHistory(const QString &keyword);
 
     QThread *m_workThread;       //工作线程
     TcpWorker *m_worker;        //工作对象

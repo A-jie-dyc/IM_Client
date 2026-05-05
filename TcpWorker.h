@@ -123,7 +123,7 @@ signals:
     void sigEquipment(const QString &ip,const int &port);
     void sigRecvProgress(const quint64 &sent,const quint64 &total);
     void sigSendProgress(const quint64 &sent,const quint64 &total);
-    void sigMessage(const QString &mes);
+    void sigMessage(bool me,const QString &mes);
 
 public slots:
     void Init();

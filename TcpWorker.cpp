@@ -120,7 +120,7 @@ void TcpWorker::onReadyRead()
             case Cmd::Mes:
             {
                 QString mes=QString::fromUtf8(inData);
-                emit sigMessage(mes);
+                emit sigMessage(false,mes);
                 break;
             }
             case Cmd::File:
@@ -179,6 +179,8 @@ void TcpWorker::parseFileSize(const QByteArray &data)
         m_rf.reset();
         return;
     }
+
+    emit sigMessage(false,rawName);
 
     m_rf.recvSize=m_rf.file->size();
 
@@ -324,6 +326,7 @@ void TcpWorker::sendFileSize()
         m_sf.reset();
         return;
     }
+    emit sigMessage(true,m_sf.fileName);
     m_sf.isSending=true;
     //转小端
     quint64 fileSize=qToLittleEndian(m_sf.totalSize);
